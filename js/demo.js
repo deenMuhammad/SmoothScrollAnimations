@@ -1,226 +1,145 @@
-/**
-* demo.js
-* http://www.codrops.com
-*
-* Licensed under the MIT license.
-* http://www.opensource.org/licenses/mit-license.php
-* 
-* Copyright 2019, Codrops
-* http://www.codrops.com
-*/
-{
-    // helper functions
-    const MathUtils = {
-        // map number x from range [a, b] to [c, d]
-        map: (x, a, b, c, d) => (x - a) * (d - c) / (b - a) + c,
-        // linear interpolation
-        lerp: (a, b, n) => (1 - n) * a + n * b
-    };
+let boxElement;
+const numSteps = 20.0;
+let prevRatio = 0.0;
+let theViewIs100Percent = false;
+let horizontalScrollStarted = false;
+let horizontalScrollEnded = false;
+let scrollValue = 0;
+let offsetWithOfScrollList;
 
-    // body element
-    const body = document.body;
-    
-    // calculate the viewport size
-    let winsize;
-    const calcWinsize = () => winsize = {width: window.innerWidth, height: window.innerHeight};
-    calcWinsize();
-    // and recalculate on resize
-    window.addEventListener('resize', calcWinsize);
+function init() {
+  new SmoothScroll(document, 120, 12);
+  boxElement = document.querySelector("#scrollList");
+  offsetWithOfScrollList = boxElement.outerWidth;
+  console.log(boxElement.outerWidth);
+  createObserver();
+}
 
-    // scroll position and update function
-    let docScroll;
-    const getPageYScroll = () => docScroll = window.pageYOffset || document.documentElement.scrollTop;
-    window.addEventListener('scroll', getPageYScroll);
+function createObserver() {
+  let observer;
 
-    // Item
-    class Item {
-        constructor(el) {
-            // the .item element
-            this.DOM = {el: el};
-            // the inner image
-            this.DOM.image = this.DOM.el.querySelector('.item__img');
-            this.renderedStyles = {
-                // here we define which property will change as we scroll the page and the items is inside the viewport
-                // in this case we will be translating the image on the y-axis
-                // we interpolate between the previous and current value to achieve a smooth effect
-                innerTranslationY: {
-                    // interpolated value
-                    previous: 0, 
-                    // current value
-                    current: 0, 
-                    // amount to interpolate
-                    ease: 0.1,
-                    // the maximum value to translate the image is set in a CSS variable (--overflow)
-                    maxValue: parseInt(getComputedStyle(this.DOM.image).getPropertyValue('--overflow'), 10),
-                    // current value setter
-                    // the value of the translation will be:
-                    // when the item's top value (relative to the viewport) equals the window's height (items just came into the viewport) the translation = minimum value (- maximum value)
-                    // when the item's top value (relative to the viewport) equals "-item's height" (item just exited the viewport) the translation = maximum value
-                    setValue: () => {
-                        const maxValue = this.renderedStyles.innerTranslationY.maxValue;
-                        const minValue = -1 * maxValue;
-                        return Math.max(Math.min(MathUtils.map(this.props.top - docScroll, winsize.height, -1 * this.props.height, minValue, maxValue), maxValue), minValue)
-                    }
-                }
-            };
-            // set the initial values
-            this.update();
-            // use the IntersectionObserver API to check when the element is inside the viewport
-            // only then the element translation will be updated
-            this.observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => this.isVisible = entry.intersectionRatio > 0);
-            });
-            this.observer.observe(this.DOM.el);
-            // init/bind events
-            this.initEvents();
-        }
-        update() {
-            // gets the item's height and top (relative to the document)
-            this.getSize();
-            // sets the initial value (no interpolation)
-            for (const key in this.renderedStyles ) {
-                this.renderedStyles[key].current = this.renderedStyles[key].previous = this.renderedStyles[key].setValue();
-            }
-            // translate the image
-            this.layout();
-        }
-        getSize() {
-            const rect = this.DOM.el.getBoundingClientRect();
-            this.props = {
-                // item's height
-                height: rect.height,
-                // offset top relative to the document
-                top: docScroll + rect.top 
-            }
-        }
-        initEvents() {
-            window.addEventListener('resize', () => this.resize());
-        }
-        resize() {
-            // on resize rest sizes and update the translation value
-            this.update();
-        }
-        render() {
-            // update the current and interpolated values
-            for (const key in this.renderedStyles ) {
-                this.renderedStyles[key].current = this.renderedStyles[key].setValue();
-                this.renderedStyles[key].previous = MathUtils.lerp(this.renderedStyles[key].previous, this.renderedStyles[key].current, this.renderedStyles[key].ease);
-            }
-            // and translates the image
-            this.layout();
-        }
-        layout() {
-            // translates the image
-            this.DOM.image.style.transform = `translate3d(0,${this.renderedStyles.innerTranslationY.previous}px,0)`;
-        }
+  let options = {
+    root: null,
+    rootMargin: "0px",
+    threshold: buildThresholdList()
+  };
+
+  observer = new IntersectionObserver(handleIntersect, options);
+  observer.observe(boxElement);
+}
+
+function handleIntersect(entries, observer) {
+  entries.forEach(entry => {
+    console.log(entry.intersectionRatio);
+    if (entry.intersectionRatio == 1 || horizontalScrollEnded) {
+      console.log("here");
+      theViewIs100Percent = true;
+      horizontalScrollStarted = true;
     }
+  });
+}
 
-    // SmoothScroll
-    class SmoothScroll {
-        constructor() {
-            // the <main> element
-            this.DOM = {main: document.querySelector('main')};
-            // the scrollable element
-            // we translate this element when scrolling (y-axis)
-            this.DOM.scrollable = this.DOM.main.querySelector('div[data-scroll]');
-            // the items on the page
-            this.items = [];
-            [...this.DOM.main.querySelectorAll('.content > .item')].forEach(item => this.items.push(new Item(item)));
-            // here we define which property will change as we scroll the page
-            // in this case we will be translating on the y-axis
-            // we interpolate between the previous and current value to achieve the smooth scrolling effect
-            this.renderedStyles = {
-                translationY: {
-                    // interpolated value
-                    previous: 0, 
-                    // current value
-                    current: 0, 
-                    // amount to interpolate
-                    ease: 0.1,
-                    // current value setter
-                    // in this case the value of the translation will be the same like the document scroll
-                    setValue: () => docScroll
-                }
-            };
-            // set the body's height
-            this.setSize();
-            // set the initial values
-            this.update();
-            // the <main> element's style needs to be modified
-            this.style();
-            // init/bind events
-            this.initEvents();
-            // start the render loop
-            requestAnimationFrame(() => this.render());
-        }
-        update() {
-            // sets the initial value (no interpolation) - translate the scroll value
-            for (const key in this.renderedStyles ) {
-                this.renderedStyles[key].current = this.renderedStyles[key].previous = this.renderedStyles[key].setValue();
-            }   
-            // translate the scrollable element
-            this.layout();
-        }
-        layout() {
-            // translates the scrollable element
-            this.DOM.scrollable.style.transform = `translate3d(0,${-1*this.renderedStyles.translationY.previous}px,0)`;
-        }
-        setSize() {
-            // set the heigh of the body in order to keep the scrollbar on the page
-            body.style.height = `${this.DOM.scrollable.scrollHeight}px`;
-        }
-        style() {
-            // the <main> needs to "stick" to the screen and not scroll
-            // for that we set it to position fixed and overflow hidden 
-            this.DOM.main.style.position = 'fixed';
-            this.DOM.main.style.width = this.DOM.main.style.height = '100%';
-            this.DOM.main.style.top = this.DOM.main.style.left = 0;
-            this.DOM.main.style.overflow = 'hidden';
-        }
-        initEvents() {
-            // on resize reset the body's height
-            window.addEventListener('resize', () => this.setSize());
-        }
-        render() {
-            // update the current and interpolated values
-            for (const key in this.renderedStyles ) {
-                this.renderedStyles[key].current = this.renderedStyles[key].setValue();
-                this.renderedStyles[key].previous = MathUtils.lerp(this.renderedStyles[key].previous, this.renderedStyles[key].current, this.renderedStyles[key].ease);
-            }
-            // and translate the scrollable element
-            this.layout();
-            
-            // for every item
-            for (const item of this.items) {
-                // if the item is inside the viewport call it's render function
-                // this will update the item's inner image translation, based on the document scroll value and the item's position on the viewport
-                if ( item.isVisible ) {
-                    item.render();
-                }
-            }
-            
-            // loop..
-            requestAnimationFrame(() => this.render());
-        }
+function buildThresholdList() {
+  let thresholds = [];
+  let numSteps = 20;
+
+  for (let i = 1.0; i <= numSteps; i++) {
+    let ratio = i / numSteps;
+    thresholds.push(ratio);
+  }
+
+  thresholds.push(0);
+  return thresholds;
+}
+
+function SmoothScroll(target, speed, smooth) {
+  if (target === document)
+    target =
+      document.scrollingElement ||
+      document.documentElement ||
+      document.body.parentNode ||
+      document.body; // cross browser support for document scrolling
+
+  var moving = false;
+  var pos = target.scrollTop;
+  var frame =
+    target === document.body && document.documentElement
+      ? document.documentElement
+      : target; // safari is the new IE
+
+  target.addEventListener("mousewheel", scrolled, { passive: false });
+  target.addEventListener("DOMMouseScroll", scrolled, { passive: false });
+
+  function scrolled(e) {
+    if (theViewIs100Percent) {
+      e.preventDefault();
+      scrollHorizontal(e);
     }
+    //disable default scrolling
+    else {
+      e.preventDefault();
+      var delta = normalizeWheelDelta(e);
 
-    /***********************************/
-    /********** Preload stuff **********/
+      pos += -delta * speed;
+      pos = Math.max(
+        0,
+        Math.min(pos, target.scrollHeight - frame.clientHeight)
+      ); // limit scrolling
 
-    // Preload images
-    const preloadImages = () => {
-        return new Promise((resolve, reject) => {
-            imagesLoaded(document.querySelectorAll('.item__img'), {background: true}, resolve);
-        });
-    };
-    
-    // And then..
-    preloadImages().then(() => {
-        // Remove the loader
-        document.body.classList.remove('loading');
-        // Get the scroll position
-        getPageYScroll();
-        // Initialize the Smooth Scrolling
-        new SmoothScroll();
-    });
+      if (!moving) update();
+    }
+  }
+
+  function scrollHorizontal(event) {
+    let target = document.getElementById("scrollList");
+    console.log(scrollValue, offsetWithOfScrollList);
+    if (scrollValue > 20) {
+      theViewIs100Percent = false;
+      return;
+    }
+    if (scrollValue > -1 * (offsetWithOfScrollList - window.innerWidth)) {
+      theViewIs100Percent = false;
+      horizontalScrollEnded = true;
+      return;
+    }
+    scrollValue = scrollValue + -1 * event.deltaY;
+    if (scrollValue > offsetWithOfScrollList) {
+      scrollValue = scrollValue - (scrollValue % offsetWithOfScrollList);
+    }
+    target.style.marginLeft = `${scrollValue}px`;
+  }
+
+  function normalizeWheelDelta(e) {
+    if (e.detail) {
+      if (e.wheelDelta)
+        return (e.wheelDelta / e.detail / 40) * (e.detail > 0 ? 1 : -1);
+      // Opera
+      else return -e.detail / 3; // Firefox
+    } else return e.wheelDelta / 120; // IE,Safari,Chrome
+  }
+
+  function update() {
+    moving = true;
+
+    var delta = (pos - target.scrollTop) / smooth;
+
+    target.scrollTop += delta;
+
+    if (Math.abs(delta) > 0.5) requestFrame(update);
+    else moving = false;
+  }
+
+  var requestFrame = (function() {
+    // requestAnimationFrame cross browser
+    return (
+      window.requestAnimationFrame ||
+      window.webkitRequestAnimationFrame ||
+      window.mozRequestAnimationFrame ||
+      window.oRequestAnimationFrame ||
+      window.msRequestAnimationFrame ||
+      function(func) {
+        window.setTimeout(func, 1000 / 50);
+      }
+    );
+  })();
 }

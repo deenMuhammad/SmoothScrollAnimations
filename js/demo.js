@@ -8,7 +8,7 @@ let scrollValue = 0;
 let offsetWithOfScrollList;
 
 function init() {
-  new SmoothScroll(document, 30, 20);
+  new SmoothScroll(document, 50, 20);
   boxElement = document.querySelector("#scrollList");
   let target = document.getElementById("scrollList");
   target.style.height = window.innerHeight;
@@ -71,6 +71,15 @@ function SmoothScroll(target, speed, smooth) {
   function scrolled(e) {
     if (theViewIs100Percent) {
       e.preventDefault();
+      var delta = normalizeWheelDelta(e);
+
+      pos += -delta * 5;
+      pos = Math.max(
+        0,
+        Math.min(pos, target.scrollHeight - frame.clientHeight)
+      ); // limit scrolling
+
+      if (!moving) update();
       scrollHorizontal(e);
     }
     //disable default scrolling

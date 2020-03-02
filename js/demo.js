@@ -73,7 +73,7 @@ function SmoothScroll(target, speed, smooth) {
       e.preventDefault();
       var delta = normalizeWheelDelta(e);
 
-      pos += -delta * 5;
+      pos += -delta * 3;
       pos = Math.max(
         0,
         Math.min(pos, target.scrollHeight - frame.clientHeight)

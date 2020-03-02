@@ -20,7 +20,7 @@ p {
   overflow-x: scroll;
   overflow-y: hidden;
   white-space: nowrap;
-  padding: 200px 200px;
+  padding: 400px 200px;
   /* overflow: hidden; */
   transition: 1s ease;
 }

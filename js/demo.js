@@ -8,7 +8,7 @@ let scrollValue = 0;
 let offsetWithOfScrollList;
 
 function init() {
-  new SmoothScroll(document, 20, 20);
+  new SmoothScroll(document, 30, 20);
   boxElement = document.querySelector("#scrollList");
   let target = document.getElementById("scrollList");
   target.style.height = window.innerHeight;
@@ -30,7 +30,7 @@ function createObserver() {
 
 function handleIntersect(entries, observer) {
   entries.forEach(entry => {
-    if (entry.intersectionRatio == 1 || horizontalScrollEnded) {
+    if (entry.intersectionRatio > 0.5 || horizontalScrollEnded) {
       theViewIs100Percent = true;
       horizontalScrollStarted = true;
     }
@@ -95,8 +95,7 @@ function SmoothScroll(target, speed, smooth) {
       theViewIs100Percent = false;
       scrollValue = offsetWithOfScrollList;
       target.scroll({ top: 0, left: scrollValue, behavior: "smooth" });
-    }
-    else if (scrollValue < 0) {
+    } else if (scrollValue < 0) {
       theViewIs100Percent = false;
       scrollValue = 0;
       target.scroll({ top: 0, left: scrollValue, behavior: "smooth" });

@@ -8,31 +8,29 @@ let scrollValue = 0;
 let offsetWithOfScrollList;
 
 function init() {
-  new SmoothScroll(document, 120, 12);
+  new SmoothScroll(document, 20, 20);
   boxElement = document.querySelector("#scrollList");
-  offsetWithOfScrollList = boxElement.outerWidth;
-  console.log(boxElement.outerWidth);
+  let target = document.getElementById("scrollList");
+  target.style.height = window.innerHeight;
+  let Children = document.getElementsByClassName("item");
+  offsetWithOfScrollList = Children.length * Children[0].clientWidth;
   createObserver();
 }
 
 function createObserver() {
   let observer;
-
   let options = {
     root: null,
     rootMargin: "0px",
     threshold: buildThresholdList()
   };
-
   observer = new IntersectionObserver(handleIntersect, options);
   observer.observe(boxElement);
 }
 
 function handleIntersect(entries, observer) {
   entries.forEach(entry => {
-    console.log(entry.intersectionRatio);
     if (entry.intersectionRatio == 1 || horizontalScrollEnded) {
-      console.log("here");
       theViewIs100Percent = true;
       horizontalScrollStarted = true;
     }
@@ -92,21 +90,19 @@ function SmoothScroll(target, speed, smooth) {
 
   function scrollHorizontal(event) {
     let target = document.getElementById("scrollList");
-    console.log(scrollValue, offsetWithOfScrollList);
-    if (scrollValue > 20) {
+    scrollValue = scrollValue + event.deltaY;
+    if (scrollValue >= offsetWithOfScrollList) {
       theViewIs100Percent = false;
-      return;
+      scrollValue = offsetWithOfScrollList;
+      target.scroll({ top: 0, left: scrollValue, behavior: "smooth" });
     }
-    if (scrollValue > -1 * (offsetWithOfScrollList - window.innerWidth)) {
+    else if (scrollValue < 0) {
       theViewIs100Percent = false;
-      horizontalScrollEnded = true;
-      return;
+      scrollValue = 0;
+      target.scroll({ top: 0, left: scrollValue, behavior: "smooth" });
+    } else {
+      target.scroll({ top: 0, left: scrollValue, behavior: "smooth" });
     }
-    scrollValue = scrollValue + -1 * event.deltaY;
-    if (scrollValue > offsetWithOfScrollList) {
-      scrollValue = scrollValue - (scrollValue % offsetWithOfScrollList);
-    }
-    target.style.marginLeft = `${scrollValue}px`;
   }
 
   function normalizeWheelDelta(e) {
